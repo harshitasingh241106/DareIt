@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 
 public class PlayerPieceController : MonoBehaviour
@@ -11,32 +12,22 @@ public class PlayerPieceController : MonoBehaviour
     public float moveSpeed = 3f;
     public string currentPathName;
 
-    void Update()
+    void Start()
     {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
-
-            Debug.DrawRay(mousePos, Vector3.forward * 10, Color.red, 1f);
-            Debug.Log($"Clicked at {mousePos}");
-
-            if (hit.collider != null)
-            {
-                Debug.Log($"Hit object: {hit.collider.name}");
-                if (hit.collider.gameObject == gameObject)
-                {
-                    selectedPiece = this;
-                    Debug.Log($"✅ Selected piece: {name}");
-                }
-            }
-            else
-            {
-                Debug.Log("❌ No collider hit!");
-            }
-        }
+        GetComponent<Button>().onClick.AddListener(OnPieceClicked);
     }
 
+    void OnPieceClicked()
+    {
+        if (DiceManager.Instance.selectedNumber <= 0)
+        {
+            Debug.Log("⚠️ Select dice first!");
+            return;
+        }
+
+        selectedPiece = this;
+        Debug.Log($"✅ Selected piece: {name}");
+    }
 
     public void PlaceOnStartTile(Transform startTile, Transform pathHolder)
     {
@@ -47,30 +38,38 @@ public class PlayerPieceController : MonoBehaviour
         currentIndex = 0;
     }
 
-    public void MovePiece(int steps)
+    public void MovePiece(int steps, bool moveBackward = false)
     {
         if (!isOnBoard || currentPath == null) return;
-        StartCoroutine(MoveAlongPath(steps));
+        StartCoroutine(MoveAlongPath(steps, moveBackward));
     }
 
-    private IEnumerator MoveAlongPath(int steps)
+    private IEnumerator MoveAlongPath(int steps, bool moveBackward)
     {
+
         for (int i = 0; i < steps; i++)
         {
-            if (currentIndex + 1 >= currentPath.childCount)
+            if (!moveBackward)
             {
-                Debug.Log($"{name} reached end of path {currentPathName}!");
-                yield break;
+                if (currentIndex + 1 >= currentPath.childCount) yield break;
+                currentIndex++;
+            }
+            else
+            {
+                if (currentIndex - 1 < 0) yield break;
+                currentIndex--;
             }
 
-            currentIndex++;
             Vector3 nextPos = currentPath.GetChild(currentIndex).position;
-
             while (Vector3.Distance(transform.position, nextPos) > 0.05f)
             {
                 transform.position = Vector3.MoveTowards(transform.position, nextPos, moveSpeed * Time.deltaTime);
                 yield return null;
             }
         }
+
+        // ✅ move complete hone ke baad hi GameManager ko batana
+        GameManager.Instance.OnPieceMoved(this);
     }
+
 }
