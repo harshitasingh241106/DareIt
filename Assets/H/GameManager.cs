@@ -135,13 +135,20 @@ public class GameManager : MonoBehaviour
     {
         var allTeleportTiles = pathManager.GetAllTeleportationTiles();
 
-        // ✅ Filter out teleport tiles from the same path
+        Debug.Log($"🧩 Found total teleport tiles: {allTeleportTiles.Count}");
+        Debug.Log($"🧭 Current path: {piece.currentPath.name}");
+
         List<(Transform tile, Transform pathParent)> otherPathTeleports = new List<(Transform, Transform)>();
+
         foreach (var tp in allTeleportTiles)
         {
+            Debug.Log($"➡ Tile: {tp.tile.name} | Path: {tp.pathParent.name}");
+
             if (tp.pathParent != piece.currentPath)
                 otherPathTeleports.Add(tp);
         }
+
+        Debug.Log($"🎯 Other-path teleport tiles found: {otherPathTeleports.Count}");
 
         if (otherPathTeleports.Count == 0)
         {
@@ -149,16 +156,13 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // ✅ Pick random teleport target
         var randomTarget = otherPathTeleports[Random.Range(0, otherPathTeleports.Count)];
         Transform targetTile = randomTarget.tile;
         Transform targetPath = randomTarget.pathParent;
 
-        // ✅ Move player instantly
         piece.transform.position = targetTile.position;
         piece.currentPath = targetPath;
 
-        // ✅ Update index on that new path
         int newIndex = 0;
         for (int i = 0; i < targetPath.childCount; i++)
         {
@@ -175,6 +179,7 @@ public class GameManager : MonoBehaviour
 
 
 
+
     public void OnPieceMoved(PlayerPieceController piece)
     {
         Debug.Log($"✅ {piece.name} finished moving.");
@@ -184,6 +189,7 @@ public class GameManager : MonoBehaviour
     {
         ResetTurn();
         Debug.Log("🔄 Turn ended.");
+        DiceManager.Instance.CanRoll = true;
     }
 
     private void ResetTurn()

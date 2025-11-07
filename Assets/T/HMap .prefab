@@ -1262,7 +1262,7 @@ GameObject:
   - component: {fileID: 3883327665910105823}
   m_Layer: 0
   m_Name: Tile_0 (23)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4075,7 +4075,7 @@ GameObject:
   - component: {fileID: 5833027970905693466}
   m_Layer: 0
   m_Name: Tile_08 (22)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4354,7 +4354,7 @@ GameObject:
   - component: {fileID: 8763206711697761744}
   m_Layer: 0
   m_Name: Tile_06 (77)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -6172,7 +6172,7 @@ GameObject:
   - component: {fileID: 1913395845259030484}
   m_Layer: 0
   m_Name: Tile_02 (19)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -6420,7 +6420,7 @@ GameObject:
   - component: {fileID: 7449984691462389183}
   m_Layer: 0
   m_Name: Tile_07 (21)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -8186,7 +8186,7 @@ GameObject:
   - component: {fileID: 2688498120429515605}
   m_Layer: 0
   m_Name: Tile_0 (1)
-  m_TagString: Start_tile
+  m_TagString: Regular_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -9984,7 +9984,7 @@ GameObject:
   - component: {fileID: 677314903166541239}
   m_Layer: 0
   m_Name: Tile_11 (54)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -11472,7 +11472,7 @@ GameObject:
   - component: {fileID: 4036231219426763084}
   m_Layer: 0
   m_Name: Tile_10
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -12340,7 +12340,7 @@ GameObject:
   - component: {fileID: 5223670540457666804}
   m_Layer: 0
   m_Name: Tile_13 (49)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -17104,7 +17104,7 @@ GameObject:
   - component: {fileID: 243431043443604116}
   m_Layer: 0
   m_Name: Tile_12 (44)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -18069,7 +18069,7 @@ GameObject:
   - component: {fileID: 7428357764184160350}
   m_Layer: 0
   m_Name: Tile_04 (29)
-  m_TagString: End_tile
+  m_TagString: Teleportation_tile
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

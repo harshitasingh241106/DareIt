@@ -6,6 +6,8 @@ using TMPro;
 public class DiceManager : MonoBehaviour
 {
     public static DiceManager Instance;
+    public bool CanRoll { get; private set; } = true;
+
 
     [Header("🎲 Dice UI")]
     public Button[] diceButtons = new Button[3];
@@ -41,6 +43,12 @@ public class DiceManager : MonoBehaviour
 
     public void StartRoll()
     {
+        if (!CanRoll)
+        {
+            Debug.Log("⚠️ Cannot roll dice until current turn ends!");
+            return;
+        }
+
         if (!IsRolling)
             StartCoroutine(RollAnimation());
     }

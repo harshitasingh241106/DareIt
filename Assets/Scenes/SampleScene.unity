@@ -119,37 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &2522867
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2522868}
-  m_Layer: 0
-  m_Name: HIIIIIIIIIII
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2522868
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2522867}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.03158, y: -0.12441, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &83949489
 GameObject:
   m_ObjectHideFlags: 0
@@ -2596,7 +2565,39 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 485306069040857769, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Teleportation_tile
+      objectReference: {fileID: 0}
+    - target: {fileID: 1973368407156935557, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Teleportation_tile
+      objectReference: {fileID: 0}
+    - target: {fileID: 2155422997786449560, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Teleportation_tile
+      objectReference: {fileID: 0}
     - target: {fileID: 3095053587389471336, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Teleportation_tile
+      objectReference: {fileID: 0}
+    - target: {fileID: 3224037253494593139, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Teleportation_tile
+      objectReference: {fileID: 0}
+    - target: {fileID: 3925712006145296590, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Regular_tile
+      objectReference: {fileID: 0}
+    - target: {fileID: 4788765197946075179, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Teleportation_tile
+      objectReference: {fileID: 0}
+    - target: {fileID: 5584097792887024111, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Teleportation_tile
+      objectReference: {fileID: 0}
+    - target: {fileID: 6215570332901207354, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
       propertyPath: m_TagString
       value: Teleportation_tile
       objectReference: {fileID: 0}
@@ -2643,6 +2644,10 @@ PrefabInstance:
     - target: {fileID: 6942344057237327146, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
       propertyPath: m_Name
       value: 'HMap '
+      objectReference: {fileID: 0}
+    - target: {fileID: 8506806429185796300, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
+      propertyPath: m_TagString
+      value: Teleportation_tile
       objectReference: {fileID: 0}
     - target: {fileID: 9047855914418694145, guid: df5e5708b8e2df142a10169075f433f2, type: 3}
       propertyPath: m_TagString
@@ -5602,4 +5607,3 @@ SceneRoots:
   - {fileID: 1286398387}
   - {fileID: 1881951111}
   - {fileID: 888639495}
-  - {fileID: 2522868}
