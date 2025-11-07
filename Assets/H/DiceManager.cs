@@ -9,6 +9,8 @@ public class DiceManager : MonoBehaviour
     public List<int> rolledNumbers = new List<int>();
     private bool[] usedNumbers = new bool[3];
     public int selectedNumber { get; private set; }
+    public static DiceManager Instance;
+    void Awake() => Instance = this;
 
     public delegate void NumberSelected(int number);
     public event NumberSelected OnNumberSelected;
