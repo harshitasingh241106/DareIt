@@ -1,6 +1,7 @@
 using System.Collections;
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
+
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
@@ -24,17 +25,16 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        diceManager.OnDiceSelected += OnDiceSelected;
         ResetTurn();
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space) && !diceManager.IsRolling)
-        {
+        // roll dice (only when allowed)
+        if (Input.GetKeyDown(KeyCode.Space) && !diceManager.IsRolling && diceManager.CanRoll)
             StartCoroutine(StartNewTurn());
-        }
 
+        // when player piece clicked
         if (PlayerPieceController.selectedPiece != null && isWaitingForPiece)
         {
             selectedPiece = PlayerPieceController.selectedPiece;
@@ -48,7 +48,6 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                // ✅ Wait for direction input instead of ending turn immediately
                 isWaitingForMoveDirection = true;
                 Debug.Log("↔️ Choose direction: Left=Backward, Right=Forward.");
             }
@@ -56,47 +55,35 @@ public class GameManager : MonoBehaviour
             PlayerPieceController.selectedPiece = null;
         }
 
-        // ✅ Handle direction choice when needed
+        // when direction input
         if (isWaitingForMoveDirection && selectedPiece != null)
         {
-            if (isWaitingForMoveDirection && selectedPiece != null)
+            int currentIndex = selectedPiece.currentIndex;
+            Transform path = selectedPiece.currentPath;
+            int maxIndex = path.childCount - 1;
+
+            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetMouseButtonDown(1))
             {
-                int currentIndex = selectedPiece.currentIndex;
-                Transform path = selectedPiece.currentPath;
-                int maxIndex = path.childCount - 1;
-
-                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetMouseButtonDown(1))
+                if (currentIndex - selectedDiceValue < 0)
                 {
-                    Debug.Log("⬅️ Moving backward.");
-
-                    // ✅ BACKWARD VALIDATION
-                    if (currentIndex - selectedDiceValue < 0)
-                    {
-                        Debug.LogWarning("❌ Can't move backward beyond the start tile!");
-                        EndTurn();
-                        return;
-                    }
-
-                    selectedPiece.MovePiece(selectedDiceValue, moveBackward: true);
-                    EndTurn();
+                    Debug.LogWarning("❌ Can't move backward beyond the start tile!");
+                    ResetMoveSelection();
+                    return;
                 }
-                else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetMouseButtonDown(0))
-                {
-                    Debug.Log("➡️ Moving forward.");
-
-                    // ✅ FORWARD VALIDATION
-                    if (currentIndex + selectedDiceValue > maxIndex)
-                    {
-                        Debug.LogWarning("❌ Can't move beyond the end tile!");
-                        EndTurn();
-                        return;
-                    }
-
-                    selectedPiece.MovePiece(selectedDiceValue, moveBackward: false);
-                    EndTurn();
-                }
+                selectedPiece.MovePiece(selectedDiceValue, true);
+                isWaitingForMoveDirection = false;
             }
-
+            else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetMouseButtonDown(0))
+            {
+                if (currentIndex + selectedDiceValue > maxIndex)
+                {
+                    Debug.LogWarning("❌ Can't move beyond the end tile!");
+                    ResetMoveSelection();
+                    return;
+                }
+                selectedPiece.MovePiece(selectedDiceValue, false);
+                isWaitingForMoveDirection = false;
+            }
         }
     }
 
@@ -109,52 +96,37 @@ public class GameManager : MonoBehaviour
         Debug.Log("✅ Choose one dice number.");
     }
 
-    private void OnDiceSelected(int index, int value)
+    public void OnDiceSelected(int index, int value)
     {
         selectedDiceValue = value;
-        Debug.Log($"🎯 Dice {index + 1} selected: {value}");
         isWaitingForPiece = true;
         diceManager.SetDieUsed(index);
+        diceManager.DisableAllDiceExcept(index);
+        Debug.Log($"🎯 Dice {index + 1} selected: {value}");
     }
 
     public void OnStartTileChosen(Transform startTile, Transform pathParent)
     {
         if (selectedPiece == null) return;
 
-        Debug.Log($"🏁 Placing piece {selectedPiece.name} on {pathParent.name}");
         selectedPiece.PlaceOnStartTile(startTile, pathParent);
-
         isWaitingForStartTile = false;
         StartTileManager.Instance.EnableStartTileButtons(false);
 
-        // ✅ Auto move after placement
         selectedPiece.MovePiece(selectedDiceValue);
-        EndTurn();
+        selectedPiece = null;
     }
+
     public void OnTeleportationTileReached(PlayerPieceController piece, Transform currentTile)
     {
         var allTeleportTiles = pathManager.GetAllTeleportationTiles();
-
-        Debug.Log($"🧩 Found total teleport tiles: {allTeleportTiles.Count}");
-        Debug.Log($"🧭 Current path: {piece.currentPath.name}");
-
         List<(Transform tile, Transform pathParent)> otherPathTeleports = new List<(Transform, Transform)>();
 
         foreach (var tp in allTeleportTiles)
-        {
-            Debug.Log($"➡ Tile: {tp.tile.name} | Path: {tp.pathParent.name}");
-
             if (tp.pathParent != piece.currentPath)
                 otherPathTeleports.Add(tp);
-        }
 
-        Debug.Log($"🎯 Other-path teleport tiles found: {otherPathTeleports.Count}");
-
-        if (otherPathTeleports.Count == 0)
-        {
-            Debug.Log("⚠️ No other teleportation tiles found in different paths.");
-            return;
-        }
+        if (otherPathTeleports.Count == 0) return;
 
         var randomTarget = otherPathTeleports[Random.Range(0, otherPathTeleports.Count)];
         Transform targetTile = randomTarget.tile;
@@ -165,31 +137,45 @@ public class GameManager : MonoBehaviour
 
         int newIndex = 0;
         for (int i = 0; i < targetPath.childCount; i++)
-        {
-            if (targetPath.GetChild(i) == targetTile)
-            {
-                newIndex = i;
-                break;
-            }
-        }
+            if (targetPath.GetChild(i) == targetTile) newIndex = i;
+
         piece.currentIndex = newIndex;
-
         Debug.Log($"✨ {piece.name} teleported to {targetTile.name} on path {targetPath.name}");
+
+        int maxIndex = targetPath.childCount - 1;
+        if (newIndex + 1 <= maxIndex)
+            piece.MovePiece(1, false);
+        else if (newIndex - 1 >= 0)
+            piece.MovePiece(1, true);
+        else
+            OnPieceMoved(piece);
     }
-
-
-
 
     public void OnPieceMoved(PlayerPieceController piece)
     {
+        piece.hasMovedThisTurn = true;
+        ResetMoveSelection();
         Debug.Log($"✅ {piece.name} finished moving.");
+
+        if (diceManager.AllDiceUsed())
+        {
+            Debug.Log("🔄 All dice used. Turn ended.");
+            ResetTurn();
+            diceManager.ResetDice();
+        }
+        else
+        {
+            // re-enable dice selection for next move
+            diceManager.EnableUnusedDice();
+        }
     }
 
-    private void EndTurn()
+    private void ResetMoveSelection()
     {
-        ResetTurn();
-        Debug.Log("🔄 Turn ended.");
-        DiceManager.Instance.CanRoll = true;
+        selectedPiece = null;
+        isWaitingForPiece = false;
+        isWaitingForMoveDirection = false;
+        isWaitingForStartTile = false;
     }
 
     private void ResetTurn()
@@ -199,5 +185,15 @@ public class GameManager : MonoBehaviour
         isWaitingForPiece = false;
         isWaitingForStartTile = false;
         isWaitingForMoveDirection = false;
+
+        foreach (var piece in playerPieces)
+            piece.hasMovedThisTurn = false;
+
+        diceManager.CanRoll = true;
+    }
+
+    public bool IsWaitingForPieceSelection()
+    {
+        return isWaitingForPiece || isWaitingForMoveDirection || isWaitingForStartTile;
     }
 }

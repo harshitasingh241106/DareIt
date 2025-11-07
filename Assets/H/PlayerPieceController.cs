@@ -11,6 +11,7 @@ public class PlayerPieceController : MonoBehaviour
     public int currentIndex = 0;
     public float moveSpeed = 3f;
     public string currentPathName;
+    public bool hasMovedThisTurn = false;
 
     void Start()
     {
@@ -22,6 +23,12 @@ public class PlayerPieceController : MonoBehaviour
         if (DiceManager.Instance.selectedNumber <= 0)
         {
             Debug.Log("⚠️ Select dice first!");
+            return;
+        }
+
+        if (hasMovedThisTurn)
+        {
+            Debug.Log($"⚠️ {name} has already moved this turn!");
             return;
         }
 
@@ -46,7 +53,6 @@ public class PlayerPieceController : MonoBehaviour
 
     private IEnumerator MoveAlongPath(int steps, bool moveBackward)
     {
-
         for (int i = 0; i < steps; i++)
         {
             if (!moveBackward)
@@ -77,7 +83,5 @@ public class PlayerPieceController : MonoBehaviour
         }
 
         GameManager.Instance.OnPieceMoved(this);
-
     }
-
 }
