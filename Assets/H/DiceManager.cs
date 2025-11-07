@@ -1,77 +1,123 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections.Generic;
 
 public class DiceManager : MonoBehaviour
 {
-    public Button button1, button2, button3;
-    public List<int> rolledNumbers = new List<int>();
-    private bool[] usedNumbers = new bool[3];
-    public int selectedNumber { get; private set; }
     public static DiceManager Instance;
-    void Awake() => Instance = this;
 
-    public delegate void NumberSelected(int number);
-    public event NumberSelected OnNumberSelected;
+    [Header("🎲 Dice UI")]
+    public Button[] diceButtons = new Button[3];
+    public TMP_Text[] diceTexts = new TMP_Text[3];
+
+    [Header("⚙️ Roll Settings")]
+    public float rollDuration = 1.0f;
+    public float rollSpeed = 0.1f;
+
+    private int[] diceValues = new int[3];
+    private bool[] diceUsed = new bool[3];
+    public bool IsRolling { get; private set; }
+
+    public int selectedNumber { get; private set; }   // ✅ for backward compatibility
+
+    public event System.Action<int, int> OnDiceSelected;
+
+    void Awake()
+    {
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
+    }
 
     void Start()
     {
-        button1.onClick.AddListener(() => SelectNumber(0));
-        button2.onClick.AddListener(() => SelectNumber(1));
-        button3.onClick.AddListener(() => SelectNumber(2));
-    }
-
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-            RollNumbers();
-
-        if (rolledNumbers.Count > 0)
+        for (int i = 0; i < diceButtons.Length; i++)
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1)) SelectNumber(0);
-            if (Input.GetKeyDown(KeyCode.Alpha2)) SelectNumber(1);
-            if (Input.GetKeyDown(KeyCode.Alpha3)) SelectNumber(2);
+            int idx = i;
+            diceButtons[i].onClick.AddListener(() => HandleDiceClick(idx));
+            diceButtons[i].gameObject.SetActive(false);
         }
     }
 
-    void RollNumbers()
+    public void StartRoll()
     {
-        rolledNumbers.Clear();
-        usedNumbers = new bool[3];
+        if (!IsRolling)
+            StartCoroutine(RollAnimation());
+    }
+
+    private IEnumerator RollAnimation()
+    {
+        IsRolling = true;
 
         for (int i = 0; i < 3; i++)
-            rolledNumbers.Add(Random.Range(1, 7));
+        {
+            diceTexts[i].text = "";
+            diceButtons[i].interactable = false;
+            diceButtons[i].gameObject.SetActive(true);
+            diceUsed[i] = false;
+        }
 
-        button1.GetComponentInChildren<TMP_Text>().text = rolledNumbers[0].ToString();
-        button2.GetComponentInChildren<TMP_Text>().text = rolledNumbers[1].ToString();
-        button3.GetComponentInChildren<TMP_Text>().text = rolledNumbers[2].ToString();
+        float elapsed = 0f;
+        while (elapsed < rollDuration)
+        {
+            for (int i = 0; i < 3; i++)
+                diceTexts[i].text = Random.Range(1, 7).ToString();
 
-        button1.interactable = true;
-        button2.interactable = true;
-        button3.interactable = true;
+            elapsed += rollSpeed;
+            yield return new WaitForSeconds(rollSpeed);
+        }
 
-        selectedNumber = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            diceValues[i] = Random.Range(1, 7);
+            diceTexts[i].text = diceValues[i].ToString();
+            diceButtons[i].interactable = true;
+            diceButtons[i].GetComponent<Image>().color = Color.white;
+        }
+
+        IsRolling = false;
     }
 
-    void SelectNumber(int index)
+    private void HandleDiceClick(int index)
     {
-        if (usedNumbers[index]) return;
-        usedNumbers[index] = true;
-        selectedNumber = rolledNumbers[index];
-        OnNumberSelected?.Invoke(selectedNumber);
+        if (diceUsed[index]) return;
 
-        switch (index)
+        diceUsed[index] = true;
+        diceButtons[index].interactable = false;
+        diceButtons[index].GetComponent<Image>().color = new Color(0.7f, 0.7f, 0.7f);
+
+        selectedNumber = diceValues[index]; // ✅ added for old references
+        Debug.Log($"🎯 Dice {index + 1} selected: {selectedNumber}");
+
+        OnDiceSelected?.Invoke(index, selectedNumber);
+    }
+
+    public void SetDieUsed(int index)
+    {
+        if (index < 0 || index >= diceButtons.Length) return;
+        diceButtons[index].interactable = false;
+        diceButtons[index].GetComponent<Image>().color = new Color(0.7f, 0.7f, 0.7f);
+    }
+
+    public void ResetDice()
+    {
+        for (int i = 0; i < 3; i++)
         {
-            case 0: button1.interactable = false; break;
-            case 1: button2.interactable = false; break;
-            case 2: button3.interactable = false; break;
+            diceButtons[i].gameObject.SetActive(false);
+            diceTexts[i].text = "";
+            diceUsed[i] = false;
         }
     }
 
-    public bool AllNumbersUsed()
+    public int GetDiceValue(int index)
     {
-        foreach (var used in usedNumbers)
+        if (index < 0 || index >= diceValues.Length) return 0;
+        return diceValues[index];
+    }
+
+    public bool AllDiceUsed()
+    {
+        foreach (bool used in diceUsed)
             if (!used) return false;
         return true;
     }
