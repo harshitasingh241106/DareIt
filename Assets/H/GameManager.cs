@@ -15,6 +15,8 @@ public class GameManager : MonoBehaviour
     private bool isWaitingForPiece;
     private bool isWaitingForStartTile;
     private bool isWaitingForMoveDirection;
+    private bool isPlayerTurn = true;
+    public EnemyPieceController[] enemyPieces;
 
     void Awake()
     {
@@ -188,7 +190,18 @@ public class GameManager : MonoBehaviour
     private void EndTurn()
     {
         ResetTurn();
-        Debug.Log("🔄 Turn ended.");
+
+        if (isPlayerTurn)
+        {
+            isPlayerTurn = false;
+            Debug.Log("🤖 Enemy turn begins!");
+            StartCoroutine(EnemyTurnRoutine());
+        }
+        else
+        {
+            isPlayerTurn = true;
+            Debug.Log("🧍 Player turn begins!");
+        }
         DiceManager.Instance.CanRoll = true;
     }
 
