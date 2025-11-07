@@ -1,91 +1,76 @@
 using UnityEngine;
 using System.Collections;
 
-[System.Serializable]
-public class PlayerPiece
-{
-    public string name;
-    public Transform pieceTransform;
-    public int pathIndex;
-    public int currentTileIndex;
-}
-
 public class PlayerPieceController : MonoBehaviour
 {
-    public PlayerPiece[] pieces;
-    public PathManager pathManager;
-    public DiceManager diceManager;
+    public static PlayerPieceController selectedPiece;
 
-    private PlayerPiece selectedPiece;
-    private int stepsToMove;
-    private bool isMoving = false;
-    private int moveDirection = 1;
-
-    void OnEnable()
-    {
-        diceManager.OnNumberSelected += SetSteps;
-    }
-
-    void OnDisable()
-    {
-        diceManager.OnNumberSelected -= SetSteps;
-    }
-
-    void SetSteps(int number)
-    {
-        stepsToMove = number;
-        Debug.Log("Number selected: " + stepsToMove);
-        // TODO: Let player select piece (for now assign manually or via UI)
-    }
+    public bool isOnBoard = false;
+    public Transform currentPath;
+    public int currentIndex = 0;
+    public float moveSpeed = 3f;
+    public string currentPathName;
 
     void Update()
     {
-        if (selectedPiece != null && !isMoving && stepsToMove > 0)
+        if (Input.GetMouseButtonDown(0))
         {
-            if (Input.GetKeyDown(KeyCode.RightArrow))
+            Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            RaycastHit2D hit = Physics2D.Raycast(mousePos, Vector2.zero);
+
+            Debug.DrawRay(mousePos, Vector3.forward * 10, Color.red, 1f);
+            Debug.Log($"Clicked at {mousePos}");
+
+            if (hit.collider != null)
             {
-                moveDirection = 1;
-                StartCoroutine(MovePiece());
+                Debug.Log($"Hit object: {hit.collider.name}");
+                if (hit.collider.gameObject == gameObject)
+                {
+                    selectedPiece = this;
+                    Debug.Log($"✅ Selected piece: {name}");
+                }
             }
-            else if (Input.GetKeyDown(KeyCode.LeftArrow))
+            else
             {
-                moveDirection = -1;
-                StartCoroutine(MovePiece());
+                Debug.Log("❌ No collider hit!");
             }
         }
     }
 
-    IEnumerator MovePiece()
+
+    public void PlaceOnStartTile(Transform startTile, Transform pathHolder)
     {
-        isMoving = true;
-        Path path = pathManager.paths[selectedPiece.pathIndex];
+        transform.position = startTile.position;
+        currentPath = pathHolder;
+        currentPathName = pathHolder.name;
+        isOnBoard = true;
+        currentIndex = 0;
+    }
 
-        for (int i = 0; i < stepsToMove; i++)
+    public void MovePiece(int steps)
+    {
+        if (!isOnBoard || currentPath == null) return;
+        StartCoroutine(MoveAlongPath(steps));
+    }
+
+    private IEnumerator MoveAlongPath(int steps)
+    {
+        for (int i = 0; i < steps; i++)
         {
-            selectedPiece.currentTileIndex += moveDirection;
-            selectedPiece.currentTileIndex = Mathf.Clamp(selectedPiece.currentTileIndex, 0, path.tiles.Length - 1);
-
-            Vector3 targetPos = path.tiles[selectedPiece.currentTileIndex].position;
-
-            while (Vector3.Distance(selectedPiece.pieceTransform.position, targetPos) > 0.01f)
+            if (currentIndex + 1 >= currentPath.childCount)
             {
-                selectedPiece.pieceTransform.position = Vector3.MoveTowards(selectedPiece.pieceTransform.position, targetPos, Time.deltaTime * 5f);
+                Debug.Log($"{name} reached end of path {currentPathName}!");
+                yield break;
+            }
+
+            currentIndex++;
+            Vector3 nextPos = currentPath.GetChild(currentIndex).position;
+
+            while (Vector3.Distance(transform.position, nextPos) > 0.05f)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, nextPos, moveSpeed * Time.deltaTime);
                 yield return null;
             }
-
-            string tileTag = path.tiles[selectedPiece.currentTileIndex].tag;
-            if (tileTag == "Teleport")
-            {
-                // TODO: teleport logic
-            }
-            else if (tileTag == "End")
-            {
-                // TODO: handle end of path
-            }
         }
-
-        isMoving = false;
-        selectedPiece = null;
-        stepsToMove = 0;
     }
 }
