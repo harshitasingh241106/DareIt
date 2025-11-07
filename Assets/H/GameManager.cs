@@ -1,6 +1,6 @@
 using System.Collections;
 using UnityEngine;
-
+using System.Collections.Generic;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
@@ -59,18 +59,44 @@ public class GameManager : MonoBehaviour
         // ✅ Handle direction choice when needed
         if (isWaitingForMoveDirection && selectedPiece != null)
         {
-            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetMouseButtonDown(1))
+            if (isWaitingForMoveDirection && selectedPiece != null)
             {
-                Debug.Log("⬅️ Moving backward.");
-                selectedPiece.MovePiece(selectedDiceValue, moveBackward: true);
-                EndTurn();
+                int currentIndex = selectedPiece.currentIndex;
+                Transform path = selectedPiece.currentPath;
+                int maxIndex = path.childCount - 1;
+
+                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetMouseButtonDown(1))
+                {
+                    Debug.Log("⬅️ Moving backward.");
+
+                    // ✅ BACKWARD VALIDATION
+                    if (currentIndex - selectedDiceValue < 0)
+                    {
+                        Debug.LogWarning("❌ Can't move backward beyond the start tile!");
+                        EndTurn();
+                        return;
+                    }
+
+                    selectedPiece.MovePiece(selectedDiceValue, moveBackward: true);
+                    EndTurn();
+                }
+                else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetMouseButtonDown(0))
+                {
+                    Debug.Log("➡️ Moving forward.");
+
+                    // ✅ FORWARD VALIDATION
+                    if (currentIndex + selectedDiceValue > maxIndex)
+                    {
+                        Debug.LogWarning("❌ Can't move beyond the end tile!");
+                        EndTurn();
+                        return;
+                    }
+
+                    selectedPiece.MovePiece(selectedDiceValue, moveBackward: false);
+                    EndTurn();
+                }
             }
-            else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetMouseButtonDown(0))
-            {
-                Debug.Log("➡️ Moving forward.");
-                selectedPiece.MovePiece(selectedDiceValue, moveBackward: false);
-                EndTurn();
-            }
+
         }
     }
 
@@ -105,6 +131,49 @@ public class GameManager : MonoBehaviour
         selectedPiece.MovePiece(selectedDiceValue);
         EndTurn();
     }
+    public void OnTeleportationTileReached(PlayerPieceController piece, Transform currentTile)
+    {
+        var allTeleportTiles = pathManager.GetAllTeleportationTiles();
+
+        // ✅ Filter out teleport tiles from the same path
+        List<(Transform tile, Transform pathParent)> otherPathTeleports = new List<(Transform, Transform)>();
+        foreach (var tp in allTeleportTiles)
+        {
+            if (tp.pathParent != piece.currentPath)
+                otherPathTeleports.Add(tp);
+        }
+
+        if (otherPathTeleports.Count == 0)
+        {
+            Debug.Log("⚠️ No other teleportation tiles found in different paths.");
+            return;
+        }
+
+        // ✅ Pick random teleport target
+        var randomTarget = otherPathTeleports[Random.Range(0, otherPathTeleports.Count)];
+        Transform targetTile = randomTarget.tile;
+        Transform targetPath = randomTarget.pathParent;
+
+        // ✅ Move player instantly
+        piece.transform.position = targetTile.position;
+        piece.currentPath = targetPath;
+
+        // ✅ Update index on that new path
+        int newIndex = 0;
+        for (int i = 0; i < targetPath.childCount; i++)
+        {
+            if (targetPath.GetChild(i) == targetTile)
+            {
+                newIndex = i;
+                break;
+            }
+        }
+        piece.currentIndex = newIndex;
+
+        Debug.Log($"✨ {piece.name} teleported to {targetTile.name} on path {targetPath.name}");
+    }
+
+
 
     public void OnPieceMoved(PlayerPieceController piece)
     {

@@ -1,40 +1,45 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[System.Serializable]
-public class Path
-{
-    public string pathName;
-    public Transform pathParent;
-    [HideInInspector] public Transform[] tiles;
-    public Transform startTile => tiles.Length > 0 ? tiles[0] : null;
-
-    public void Initialize()
-    {
-        int count = pathParent.childCount;
-        tiles = new Transform[count];
-        for (int i = 0; i < count; i++)
-            tiles[i] = pathParent.GetChild(i);
-    }
-}
-
 public class PathManager : MonoBehaviour
 {
-    public static PathManager Instance;
-    public List<Path> allPaths = new List<Path>();
-
-    void Awake()
+    [System.Serializable]
+    public class Path
     {
-        Instance = this;
-        foreach (var p in allPaths)
-            p.Initialize();
+        public string pathName;
+        public Transform pathParent;
+        [HideInInspector] public Transform[] tiles;
+
+        public void InitializeTiles()
+        {
+            tiles = new Transform[pathParent.childCount];
+            for (int i = 0; i < pathParent.childCount; i++)
+                tiles[i] = pathParent.GetChild(i);
+        }
     }
 
-    public Path GetPathFromStartTile(Transform startTile)
+    public Path[] paths;
+
+    void Start()
     {
-        foreach (var path in allPaths)
-            if (path.startTile == startTile)
-                return path;
-        return null;
+        foreach (var path in paths)
+            path.InitializeTiles();
+    }
+
+    // ✅ Collect all teleport tiles
+    public List<(Transform tile, Transform pathParent)> GetAllTeleportationTiles()
+    {
+        List<(Transform, Transform)> teleportTiles = new List<(Transform, Transform)>();
+
+        foreach (var path in paths)
+        {
+            foreach (var tile in path.tiles)
+            {
+                if (tile.CompareTag("Teleportation_tile"))
+                    teleportTiles.Add((tile, path.pathParent));
+            }
+        }
+
+        return teleportTiles;
     }
 }

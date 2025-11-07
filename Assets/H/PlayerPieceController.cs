@@ -68,8 +68,16 @@ public class PlayerPieceController : MonoBehaviour
             }
         }
 
-        // ✅ move complete hone ke baad hi GameManager ko batana
+        Transform currentTile = currentPath.GetChild(currentIndex);
+
+        if (currentTile.CompareTag("Teleportation_tile"))
+        {
+            Debug.Log("⚡ Teleportation tile reached!");
+            GameManager.Instance.OnTeleportationTileReached(this, currentTile);
+        }
+
         GameManager.Instance.OnPieceMoved(this);
+
     }
 
 }
