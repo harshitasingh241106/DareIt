@@ -6,7 +6,7 @@ using TMPro;
 public class DiceManager : MonoBehaviour
 {
     public static DiceManager Instance;
-    public bool CanRoll { get; set; } = true;
+    public bool CanRoll { get; private set; } = true;
 
 
     [Header("🎲 Dice UI")]
@@ -94,13 +94,11 @@ public class DiceManager : MonoBehaviour
         diceButtons[index].interactable = false;
         diceButtons[index].GetComponent<Image>().color = new Color(0.7f, 0.7f, 0.7f);
 
-        selectedNumber = diceValues[index];
+        selectedNumber = diceValues[index]; // ✅ added for old references
         Debug.Log($"🎯 Dice {index + 1} selected: {selectedNumber}");
 
-        CanRoll = false; // ✅ prevent re-rolling mid-turn
         OnDiceSelected?.Invoke(index, selectedNumber);
     }
-
 
     public void SetDieUsed(int index)
     {
