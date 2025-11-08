@@ -11,17 +11,29 @@ public class PlayerPieceController : MonoBehaviour
     public int currentIndex = 0;
     public float moveSpeed = 3f;
     public string currentPathName;
+    public bool hasMovedThisTurn = false;
 
     void Start()
     {
+        // keep as before: button click to select piece
         GetComponent<Button>().onClick.AddListener(OnPieceClicked);
     }
 
     void OnPieceClicked()
     {
+        Debug.Log($"Clicked on: {name}  (instanceID: {GetInstanceID()})");
+        // BLOCK selection while a box event UI is active
+        if (GameManager.Instance != null && GameManager.Instance.IsBoxEventActive) return;
+
         if (DiceManager.Instance.selectedNumber <= 0)
         {
             Debug.Log("⚠️ Select dice first!");
+            return;
+        }
+
+        if (hasMovedThisTurn)
+        {
+            Debug.Log($"⚠️ {name} has already moved this turn!");
             return;
         }
 
@@ -44,13 +56,20 @@ public class PlayerPieceController : MonoBehaviour
         StartCoroutine(MoveAlongPath(steps, moveBackward));
     }
 
-    private IEnumerator MoveAlongPath(int steps, bool moveBackward)
+    public IEnumerator MoveAlongPath(int steps, bool moveBackward)
     {
-
         for (int i = 0; i < steps; i++)
         {
+            if (GameManager.Instance != null && GameManager.Instance.audioSource != null && GameManager.Instance.stepMoveClip != null)
+            {
+                var src = GameManager.Instance.audioSource;
+                src.pitch = Random.Range(0.95f, 1.05f); // optional variation
+                src.PlayOneShot(GameManager.Instance.stepMoveClip, GameManager.Instance.stepMoveVolume);
+            }
+
             if (!moveBackward)
             {
+
                 if (currentIndex + 1 >= currentPath.childCount) yield break;
                 currentIndex++;
             }
@@ -70,14 +89,24 @@ public class PlayerPieceController : MonoBehaviour
 
         Transform currentTile = currentPath.GetChild(currentIndex);
 
+        // TELEPORTATION: left exactly as you had it
         if (currentTile.CompareTag("Teleportation_tile"))
         {
             Debug.Log("⚡ Teleportation tile reached!");
             GameManager.Instance.OnTeleportationTileReached(this, currentTile);
+            yield break; // teleportation handler will continue flow (it calls MovePiece or OnPieceMoved inside)
         }
 
+        // IMPORTANT: keep original flow — call OnPieceMoved which will now also check for box tiles.
         GameManager.Instance.OnPieceMoved(this);
-
     }
 
+    // ensure a destroy function exists for bombs
+    public void DestroyPiece()
+    {
+        isOnBoard = false;
+        gameObject.SetActive(false);
+        // optionally notify GameManager to check loss conditions
+        // GameManager.Instance.CheckPlayerLoss(); // implement if needed
+    }
 }

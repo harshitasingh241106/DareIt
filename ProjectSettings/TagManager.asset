@@ -8,6 +8,7 @@ TagManager:
   - End_tile
   - Regular_tile
   - Teleportation_tile
+  - Box_tile
   layers:
   - Default
   - TransparentFX

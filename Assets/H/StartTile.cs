@@ -38,4 +38,13 @@ public class StartTileManager : MonoBehaviour
             st.uiButton.interactable = enable;
         }
     }
+
+    // -------------------- NEW: Random start tile --------------------
+    public Transform GetRandomStartTile()
+    {
+        if (startTiles == null || startTiles.Length == 0) return null;
+
+        int idx = Random.Range(0, startTiles.Length);
+        return startTiles[idx].linkedTile;
+    }
 }
