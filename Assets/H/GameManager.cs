@@ -117,6 +117,7 @@ public class GameManager : MonoBehaviour
                     Debug.Log("⚠️ Backward move not allowed — at start tile!");
                     ResetMoveSelection();
                     diceManager.EnableUnusedDice();
+                    isWaitingForPiece = true;  // ✅ allow retry
                 }
             }
         }
@@ -479,6 +480,7 @@ public class GameManager : MonoBehaviour
         isWaitingForPiece = false;
         isWaitingForMoveDirection = false;
         isWaitingForStartTile = false;
+        DiceManager.Instance.selectedNumber = 0;  // ✅ ensures clean state
     }
 
     private void ResetTurn()

@@ -20,7 +20,7 @@ public class DiceManager : MonoBehaviour
     private bool[] diceUsed = new bool[3];
     public bool IsRolling { get; private set; }
 
-    public int selectedNumber { get; private set; }
+    public int selectedNumber { get; set; }
 
     void Awake()
     {
