@@ -21,6 +21,9 @@ public class DiceManager : MonoBehaviour
     public bool IsRolling { get; private set; }
 
     public int selectedNumber { get; set; }
+    [Header("🎵 Audio")]
+    public AudioSource audioSource;
+    public AudioClip diceRollClip;
 
     void Awake()
     {
@@ -42,6 +45,9 @@ public class DiceManager : MonoBehaviour
     {
         if (!CanRoll || IsRolling) return;
         StartCoroutine(RollAnimation());
+        if (audioSource != null && diceRollClip != null)
+            audioSource.PlayOneShot(diceRollClip);
+
     }
 
 

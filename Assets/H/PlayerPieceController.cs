@@ -60,8 +60,16 @@ public class PlayerPieceController : MonoBehaviour
     {
         for (int i = 0; i < steps; i++)
         {
+            if (GameManager.Instance != null && GameManager.Instance.audioSource != null && GameManager.Instance.stepMoveClip != null)
+            {
+                var src = GameManager.Instance.audioSource;
+                src.pitch = Random.Range(0.95f, 1.05f); // optional variation
+                src.PlayOneShot(GameManager.Instance.stepMoveClip, GameManager.Instance.stepMoveVolume);
+            }
+
             if (!moveBackward)
             {
+
                 if (currentIndex + 1 >= currentPath.childCount) yield break;
                 currentIndex++;
             }

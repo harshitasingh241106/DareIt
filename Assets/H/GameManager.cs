@@ -26,6 +26,14 @@ public class GameManager : MonoBehaviour
     public GameObject boxUsedMarkerPrefab;
     private GameObject activeBoxUI;
     public bool IsBoxEventActive { get; private set; } = false;
+    [Header("🎵 Audio Clips")]
+    public AudioSource audioSource;
+    public AudioClip enemyKillClip;
+    public AudioClip bombExplosionClip;
+    [Header("🎵 Step Movement Sounds")]
+    public AudioClip stepMoveClip;
+    public float stepMoveVolume = 0.5f;
+
 
     void Awake()
     {
@@ -35,12 +43,14 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        Debug.Log("Press Space bar to roll dice...");
         ResetTurn();
     }
 
     void Update()
     {
         if (isEnemyTurn) return;
+
 
         // roll dice
         if (Input.GetKeyDown(KeyCode.Space) && !diceManager.IsRolling && diceManager.CanRoll)
@@ -54,20 +64,20 @@ public class GameManager : MonoBehaviour
 
             if (!selectedPiece.isOnBoard)
             {
-                Debug.Log("🟩 Piece selected. Waiting for start tile click...");
+                Debug.Log("You’ve selected a piece — now click a highlighted tile to begin your move.");
                 isWaitingForStartTile = true;
                 StartTileManager.Instance.EnableStartTileButtons(true);
             }
             else
             {
                 isWaitingForMoveDirection = true;
-                Debug.Log("↔ Choose direction: Left=Backward, Right=Forward.");
+                Debug.Log("Choose direction using arrow key/Mouse: Left=Backward, Right=Forward.");
             }
 
             PlayerPieceController.selectedPiece = null;
         }
 
-        // when direction chosen
+
         // when direction chosen
         if (isWaitingForMoveDirection && selectedPiece != null)
         {
@@ -81,7 +91,7 @@ public class GameManager : MonoBehaviour
             // 🧱 case 1: no move possible at all
             if (!canMoveForward && !canMoveBackward)
             {
-                Debug.LogWarning("❌ No valid move possible for this piece!");
+                Debug.LogWarning("No valid move possible for this piece!");
                 ResetMoveSelection();
                 diceManager.EnableUnusedDice();
                 return;
@@ -97,7 +107,7 @@ public class GameManager : MonoBehaviour
                 }
                 else
                 {
-                    Debug.Log("⚠️ Forward move not allowed — at end tile!");
+                    Debug.Log("Forward move not possible! Select another piece or move backward..");
 
                     ResetMoveSelection();
                     diceManager.EnableUnusedDice();
@@ -114,7 +124,7 @@ public class GameManager : MonoBehaviour
                 }
                 else
                 {
-                    Debug.Log("⚠️ Backward move not allowed — at start tile!");
+                    Debug.Log("Backward move not possible!Select another piece or move forward...");
                     ResetMoveSelection();
                     diceManager.EnableUnusedDice();
                     isWaitingForPiece = true;  // ✅ allow retry
@@ -125,11 +135,12 @@ public class GameManager : MonoBehaviour
 
     private IEnumerator StartNewTurn()
     {
-        Debug.Log("🎲 Player rolling dice...");
+        Debug.Log("Player rolling dice...");
+        Debug.Log("Select one dice number.");
         diceManager.ResetDice();
         diceManager.StartRoll();
         yield return new WaitForSeconds(diceManager.rollDuration + 0.5f);
-        Debug.Log("✅ Choose one dice number.");
+
     }
 
     public void OnDiceSelected(int index, int value)
@@ -138,7 +149,8 @@ public class GameManager : MonoBehaviour
         isWaitingForPiece = true;
         diceManager.SetDieUsed(index);
         diceManager.DisableAllDiceExcept(index);
-        Debug.Log($"🎯 Dice {index + 1} selected: {value}");
+        Debug.Log("Select a player piece to move...");
+
     }
 
     public void OnStartTileChosen(Transform startTile, Transform pathParent)
@@ -194,7 +206,7 @@ public class GameManager : MonoBehaviour
             if (targetPath.GetChild(i) == targetTile) newIndex = i;
 
         piece.currentIndex = newIndex;
-        Debug.Log($"✨ {piece.name} teleported to {targetTile.name} on path {targetPath.name}");
+        Debug.Log($"✨ Piece Teleported ");
 
         int maxIndex = targetPath.childCount - 1;
         if (newIndex + 1 <= maxIndex)
@@ -207,7 +219,6 @@ public class GameManager : MonoBehaviour
 
     public void OnPieceMoved(PlayerPieceController piece)
     {
-        Debug.Log($"Actually moving: {piece.name}");
 
         if (piece == null) return;
 
@@ -234,7 +245,7 @@ public class GameManager : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogError("❌ Missing Canvas or BoxChoiceUIPrefab!");
+
                 }
 
                 return; // wait for UI choice
@@ -244,13 +255,13 @@ public class GameManager : MonoBehaviour
 
         piece.hasMovedThisTurn = true;
         ResetMoveSelection();
-        Debug.Log($"✅ {piece.name} finished moving.");
+
 
         if (!isEnemyTurn)
         {
             if (diceManager.AllDiceUsed())
             {
-                Debug.Log("🔄 Player turn ended. Enemy turn starting...");
+                Debug.Log("Player turn ended. Enemy turn starting...");
                 StartCoroutine(EnemyTurnCoroutine());
             }
             else
@@ -319,8 +330,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (bestPlayer != null)
-            Debug.Log($"🧠 {enemy.name} predicts {bestPlayer.name} will be near teleport on {bestPlayer.currentPath.name}");
+
 
         return bestPlayer;
     }
@@ -331,7 +341,7 @@ public class GameManager : MonoBehaviour
     {
         if (tile == null)
         {
-            Debug.LogError("❌ Box tile missing during ResolveBoxChoice!");
+
             EndBoxEvent(piece);
             return;
         }
@@ -339,7 +349,7 @@ public class GameManager : MonoBehaviour
         BoxTile box = tile.GetComponent<BoxTile>();
         if (box == null)
         {
-            Debug.LogWarning("⚠️ Tile has no BoxTile script. Treating as Empty.");
+
             EndBoxEvent(piece);
             return;
         }
@@ -349,7 +359,7 @@ public class GameManager : MonoBehaviour
 
         if (!open)
         {
-            Debug.Log("📦 Player ignored the box.");
+
             EndBoxEvent(piece);
             return;
         }
@@ -358,6 +368,9 @@ public class GameManager : MonoBehaviour
         {
             case BoxTile.BoxType.Bomb:
                 Debug.Log("💣 Boom! This box was a bomb!");
+                if (audioSource != null && bombExplosionClip != null)
+                    audioSource.PlayOneShot(bombExplosionClip);
+
                 piece.DestroyPiece();
                 break;
 
@@ -381,7 +394,7 @@ public class GameManager : MonoBehaviour
 
     private void EndBoxEvent(PlayerPieceController piece)
     {
-        Debug.Log("📦 Box event ended.");
+
         OnPieceMoved(piece);
     }
 
@@ -411,7 +424,7 @@ public class GameManager : MonoBehaviour
 
         int[] diceValues = diceManager.GetRolledValues();
         List<int> unusedDice = new List<int>(diceValues);
-        Debug.Log($"🎲 Enemy rolled: {string.Join(", ", diceValues)}");
+
 
         // Ensure enemyPieces array filled
         if (enemyParent != null && (enemyPieces == null || enemyPieces.Length == 0))
@@ -442,7 +455,7 @@ public class GameManager : MonoBehaviour
             {
                 Transform randomStart = StartTileManager.Instance.GetRandomStartTile();
                 e.SpawnAtTile(randomStart.parent, randomStart.GetSiblingIndex());
-                Debug.Log($"🟢 {e.name} spawned at start.");
+
                 yield return new WaitForSeconds(0.5f);
             }
 
@@ -455,7 +468,6 @@ public class GameManager : MonoBehaviour
                 int distance = target.currentIndex - e.currentIndex;
                 moveBackward = distance < 0;
 
-                Debug.Log($"🎯 {e.name} chasing {target.name} {(moveBackward ? "backward" : "forward")} (dist={Mathf.Abs(distance)})");
 
                 // check if any unused dice matches exact kill
                 foreach (int d in new List<int>(unusedDice))
@@ -465,7 +477,7 @@ public class GameManager : MonoBehaviour
                     {
                         diceValue = d;
                         unusedDice.Remove(d);
-                        Debug.Log($"💀 {e.name} found perfect kill with dice {d}");
+
                         break;
                     }
                 }
@@ -486,12 +498,12 @@ public class GameManager : MonoBehaviour
                     {
                         int tpIndex = teleportHere.GetSiblingIndex();
                         moveBackward = tpIndex < e.currentIndex;
-                        Debug.Log($"🔮 {e.name} predicts {predictedTarget.name} will reach {predictedTarget.currentPath.name}, moving to teleport {tpIndex}");
+
                     }
                     else
                     {
                         moveBackward = Random.value > 0.5f;
-                        Debug.Log($"🤖 {e.name} could not find teleport, moving randomly.");
+
                     }
                 }
                 else
@@ -502,12 +514,12 @@ public class GameManager : MonoBehaviour
                     {
                         int tpIndex = teleportHere.GetSiblingIndex();
                         moveBackward = tpIndex < e.currentIndex;
-                        Debug.Log($"🌀 {e.name} heading toward teleport tile (fallback) {tpIndex}");
+
                     }
                     else
                     {
                         moveBackward = Random.value > 0.5f;
-                        Debug.Log($"🤖 {e.name} moving randomly (no teleports).");
+
                     }
                 }
             }
@@ -527,7 +539,8 @@ public class GameManager : MonoBehaviour
         }
 
         // ✅ Turn end
-        Debug.Log("✅ Enemy turn ended. Back to Player turn...");
+        Debug.Log("Enemy turn ended. Back to Player turn...");
+        Debug.Log("Press Space bar to roll the dice...");
         yield return new WaitForSeconds(0.5f);
 
         diceManager.ResetDice();
@@ -547,7 +560,9 @@ public class GameManager : MonoBehaviour
 
         if (target != null && target.isOnBoard)
         {
-            Debug.Log($"💀 Enemy {enemy.name} captured {target.name}!");
+            Debug.Log($"💀 Enemy captured a player's piece!");
+            if (audioSource != null && enemyKillClip != null)
+                audioSource.PlayOneShot(enemyKillClip);
 
             // Destroy the player piece
             target.DestroyPiece();
