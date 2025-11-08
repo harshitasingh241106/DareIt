@@ -15,11 +15,16 @@ public class PlayerPieceController : MonoBehaviour
 
     void Start()
     {
+        // keep as before: button click to select piece
         GetComponent<Button>().onClick.AddListener(OnPieceClicked);
     }
 
     void OnPieceClicked()
     {
+        Debug.Log($"Clicked on: {name}  (instanceID: {GetInstanceID()})");
+        // BLOCK selection while a box event UI is active
+        if (GameManager.Instance != null && GameManager.Instance.IsBoxEventActive) return;
+
         if (DiceManager.Instance.selectedNumber <= 0)
         {
             Debug.Log("⚠️ Select dice first!");
@@ -51,7 +56,7 @@ public class PlayerPieceController : MonoBehaviour
         StartCoroutine(MoveAlongPath(steps, moveBackward));
     }
 
-    private IEnumerator MoveAlongPath(int steps, bool moveBackward)
+    public IEnumerator MoveAlongPath(int steps, bool moveBackward)
     {
         for (int i = 0; i < steps; i++)
         {
@@ -76,12 +81,24 @@ public class PlayerPieceController : MonoBehaviour
 
         Transform currentTile = currentPath.GetChild(currentIndex);
 
+        // TELEPORTATION: left exactly as you had it
         if (currentTile.CompareTag("Teleportation_tile"))
         {
             Debug.Log("⚡ Teleportation tile reached!");
             GameManager.Instance.OnTeleportationTileReached(this, currentTile);
+            yield break; // teleportation handler will continue flow (it calls MovePiece or OnPieceMoved inside)
         }
 
+        // IMPORTANT: keep original flow — call OnPieceMoved which will now also check for box tiles.
         GameManager.Instance.OnPieceMoved(this);
+    }
+
+    // ensure a destroy function exists for bombs
+    public void DestroyPiece()
+    {
+        isOnBoard = false;
+        gameObject.SetActive(false);
+        // optionally notify GameManager to check loss conditions
+        // GameManager.Instance.CheckPlayerLoss(); // implement if needed
     }
 }

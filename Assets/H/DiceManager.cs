@@ -44,6 +44,7 @@ public class DiceManager : MonoBehaviour
         StartCoroutine(RollAnimation());
     }
 
+
     private IEnumerator RollAnimation()
     {
         IsRolling = true;
@@ -75,6 +76,35 @@ public class DiceManager : MonoBehaviour
 
         IsRolling = false;
         CanRoll = false; // ❌ prevent re-roll until all dice used
+    }
+    // Returns the last rolled dice values for reuse (enemy reading UI dice values)
+    public int[] GetRolledValues()
+    {
+        int[] copy = new int[3];
+        for (int i = 0; i < 3; i++)
+        {
+            int parsed;
+            if (int.TryParse(diceTexts[i].text, out parsed))
+                copy[i] = parsed;
+            else
+                copy[i] = Random.Range(1, 7);
+        }
+        return copy;
+    }
+
+    // Highlights currently used dice visually (for enemy turn)
+    public void HighlightDie(int index)
+    {
+        for (int i = 0; i < diceButtons.Length; i++)
+        {
+            Image img = diceButtons[i].GetComponent<Image>();
+            if (i == index)
+                img.color = Color.yellow;  // highlight active
+            else if (diceUsed[i])
+                img.color = new Color(0.7f, 0.7f, 0.7f);  // used grey
+            else
+                img.color = Color.white; // unused
+        }
     }
 
     private void HandleDiceClick(int index)
@@ -118,6 +148,7 @@ public class DiceManager : MonoBehaviour
         return true;
     }
 
+
     public void DisableAllDiceExcept(int usedIndex)
     {
         for (int i = 0; i < diceButtons.Length; i++)
@@ -141,4 +172,20 @@ public class DiceManager : MonoBehaviour
             }
         }
     }
+    public void ForceRollForEnemy()
+    {
+        for (int i = 0; i < diceButtons.Length; i++)
+        {
+            diceButtons[i].gameObject.SetActive(true);
+            diceTexts[i].text = "";
+            diceButtons[i].interactable = false;
+            diceUsed[i] = false;
+            diceButtons[i].GetComponent<Image>().color = Color.white;
+        }
+
+        CanRoll = true;
+        StartCoroutine(RollAnimation());
+    }
+
+
 }
