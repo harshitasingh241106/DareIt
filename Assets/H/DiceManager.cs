@@ -93,19 +93,21 @@ public class DiceManager : MonoBehaviour
     }
 
     // Highlights currently used dice visually (for enemy turn)
-    public void HighlightDie(int index)
+    public void HighlightDieForValue(int value)
     {
         for (int i = 0; i < diceButtons.Length; i++)
         {
-            Image img = diceButtons[i].GetComponent<Image>();
-            if (i == index)
-                img.color = Color.yellow;  // highlight active
-            else if (diceUsed[i])
-                img.color = new Color(0.7f, 0.7f, 0.7f);  // used grey
-            else
-                img.color = Color.white; // unused
+            if (diceTexts[i].text == value.ToString())
+            {
+                diceButtons[i].GetComponent<Image>().color = Color.yellow;
+                return;
+            }
         }
     }
+
+    // 🌀 Find nearest teleport tile on the current path
+
+
 
     private void HandleDiceClick(int index)
     {

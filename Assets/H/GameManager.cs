@@ -164,7 +164,25 @@ public class GameManager : MonoBehaviour
 
         if (otherPathTeleports.Count == 0) return;
 
-        var randomTarget = otherPathTeleports[Random.Range(0, otherPathTeleports.Count)];
+        // 🧠 prefer teleport tiles on paths that have at least one player
+        List<(Transform tile, Transform pathParent)> candidateTeleports = new List<(Transform, Transform)>();
+        foreach (var tp in otherPathTeleports)
+        {
+            foreach (var p in playerPieces)
+            {
+                if (p.isOnBoard && p.currentPath == tp.pathParent)
+                {
+                    candidateTeleports.Add(tp);
+                    break;
+                }
+            }
+        }
+
+        // if no targeted teleport found, fallback to random
+        var randomTarget = candidateTeleports.Count > 0
+            ? candidateTeleports[Random.Range(0, candidateTeleports.Count)]
+            : otherPathTeleports[Random.Range(0, otherPathTeleports.Count)];
+
         Transform targetTile = randomTarget.tile;
         Transform targetPath = randomTarget.pathParent;
 
@@ -241,6 +259,72 @@ public class GameManager : MonoBehaviour
             }
         }
     }
+    private Transform FindNearestTeleportTile(EnemyPieceController enemy)
+    {
+        if (enemy.currentPath == null) return null;
+
+        float shortestDist = float.MaxValue;
+        Transform nearestTile = null;
+
+        for (int i = 0; i < enemy.currentPath.childCount; i++)
+        {
+            Transform tile = enemy.currentPath.GetChild(i);
+            if (!tile.CompareTag("Teleportation_tile")) continue;
+
+            float dist = Mathf.Abs(i - enemy.currentIndex);
+            if (dist < shortestDist)
+            {
+                shortestDist = dist;
+                nearestTile = tile;
+            }
+        }
+
+        return nearestTile;
+    }
+    // 🧠 Predict where a player might go next turn (rough estimate)
+    private int PredictPlayerNextIndex(PlayerPieceController player)
+    {
+        // Assume typical dice range (1–6) and average move
+        int averageMove = 3;
+
+        int predicted = player.currentIndex + averageMove;
+        if (predicted >= player.currentPath.childCount)
+            predicted = player.currentPath.childCount - 1;
+
+        return predicted;
+    }
+    // 🧭 Predictive targeting: find player whose future position will be nearest after teleport
+    private PlayerPieceController FindBestFutureTarget(EnemyPieceController enemy, List<(Transform tile, Transform pathParent)> teleports)
+    {
+        PlayerPieceController bestPlayer = null;
+        float bestDistance = float.MaxValue;
+        Transform bestTeleport = null;
+
+        foreach (var tp in teleports)
+        {
+            foreach (var p in playerPieces)
+            {
+                if (!p.isOnBoard) continue;
+
+                int predictedIndex = PredictPlayerNextIndex(p);
+                if (tp.pathParent != p.currentPath) continue;
+
+                float distance = Mathf.Abs(predictedIndex - tp.tile.GetSiblingIndex());
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestPlayer = p;
+                    bestTeleport = tp.tile;
+                }
+            }
+        }
+
+        if (bestPlayer != null)
+            Debug.Log($"🧠 {enemy.name} predicts {bestPlayer.name} will be near teleport on {bestPlayer.currentPath.name}");
+
+        return bestPlayer;
+    }
+
     // ---------------- BOX HANDLING ----------------
 
     public void ResolveBoxChoice(PlayerPieceController piece, GameObject tile, bool open)
@@ -308,74 +392,141 @@ public class GameManager : MonoBehaviour
         isEnemyTurn = true;
         Debug.Log("🤖 Enemy turn started...");
 
-        // Reset and show dice UI
+        // 🛑 Skip if all players dead
+        bool anyAlive = false;
+        foreach (var p in playerPieces)
+            if (p.isOnBoard) anyAlive = true;
+
+        if (!anyAlive)
+        {
+            Debug.Log("💀 All players dead — enemy skipping turn.");
+            yield break;
+        }
+
+        // 🎲 Enemy visible dice roll
         diceManager.ResetDice();
         yield return new WaitForSeconds(0.5f);
-
-        // 🎲 Enemy rolls visibly
-        Debug.Log("🎲 Enemy rolling dice...");
-        diceManager.ForceRollForEnemy(); // ensure visible roll
+        diceManager.ForceRollForEnemy();
         yield return new WaitForSeconds(diceManager.rollDuration + 0.5f);
 
-        int[] enemyDiceValues = diceManager.GetRolledValues();
-        Debug.Log($"🤖 Enemy rolled: {string.Join(", ", enemyDiceValues)}");
+        int[] diceValues = diceManager.GetRolledValues();
+        List<int> unusedDice = new List<int>(diceValues);
+        Debug.Log($"🎲 Enemy rolled: {string.Join(", ", diceValues)}");
 
-        // Ensure 4 enemy pieces are referenced
+        // Ensure enemyPieces array filled
         if (enemyParent != null && (enemyPieces == null || enemyPieces.Length == 0))
             enemyPieces = enemyParent.GetComponentsInChildren<EnemyPieceController>();
 
-        // ✅ Step 1: Pick 3 random unique enemy pieces
-        List<EnemyPieceController> availablePieces = new List<EnemyPieceController>(enemyPieces);
-        List<EnemyPieceController> selectedPieces = new List<EnemyPieceController>();
+        // Select up to 3 random active enemies
+        List<EnemyPieceController> enemiesToMove = new List<EnemyPieceController>();
+        List<EnemyPieceController> pool = new List<EnemyPieceController>(enemyPieces);
 
-        for (int i = 0; i < 3 && availablePieces.Count > 0; i++)
+        for (int i = 0; i < 3 && pool.Count > 0; i++)
         {
-            int randIndex = Random.Range(0, availablePieces.Count);
-            selectedPieces.Add(availablePieces[randIndex]);
-            availablePieces.RemoveAt(randIndex);
+            int idx = Random.Range(0, pool.Count);
+            enemiesToMove.Add(pool[idx]);
+            pool.RemoveAt(idx);
         }
 
-        // ✅ Step 2: Move each selected piece with one dice
-        for (int i = 0; i < selectedPieces.Count; i++)
+        // 🧩 Move selected enemies strategically
+        foreach (EnemyPieceController e in enemiesToMove)
         {
-            int steps = enemyDiceValues[i];
-            EnemyPieceController e = selectedPieces[i];
+            if (unusedDice.Count == 0) break; // all dice used
 
-            // Highlight current dice
-            diceManager.HighlightDie(i);
-            yield return new WaitForSeconds(Random.Range(0.8f, 1.2f));
+            // pick random available dice first
+            int diceValue = unusedDice[Random.Range(0, unusedDice.Count)];
+            unusedDice.Remove(diceValue);
 
-            // Spawn piece if not placed
-            if (!e.isOnBoard)
+            // Spawn if not placed
+            if (e.currentPath == null)
             {
                 Transform randomStart = StartTileManager.Instance.GetRandomStartTile();
                 e.SpawnAtTile(randomStart.parent, randomStart.GetSiblingIndex());
-                yield return new WaitForSeconds(0.3f);
+                Debug.Log($"🟢 {e.name} spawned at start.");
+                yield return new WaitForSeconds(0.5f);
             }
 
-            // Direction logic
+            // Find nearest player on same path
+            PlayerPieceController target = FindNearestPlayer(e);
             bool moveBackward = false;
-            if (e.currentIndex + steps >= e.currentPath.childCount)
-                moveBackward = true;
-            else if (e.currentIndex - steps < 0)
-                moveBackward = false;
+
+            if (target != null)
+            {
+                int distance = target.currentIndex - e.currentIndex;
+                moveBackward = distance < 0;
+
+                Debug.Log($"🎯 {e.name} chasing {target.name} {(moveBackward ? "backward" : "forward")} (dist={Mathf.Abs(distance)})");
+
+                // check if any unused dice matches exact kill
+                foreach (int d in new List<int>(unusedDice))
+                {
+                    int predicted = e.currentIndex + (moveBackward ? -d : d);
+                    if (predicted == target.currentIndex)
+                    {
+                        diceValue = d;
+                        unusedDice.Remove(d);
+                        Debug.Log($"💀 {e.name} found perfect kill with dice {d}");
+                        break;
+                    }
+                }
+            }
             else
-                moveBackward = Random.value > 0.5f;
+            {
+                // 🧠 No player on this path — plan teleport toward likely player path
+                var allTeleports = pathManager.GetAllTeleportationTiles();
 
-            Debug.Log($"🎯 Enemy {e.name} uses dice {steps}, moving {(moveBackward ? "backward" : "forward")}");
+                // Predict which teleport leads to path where player is headed
+                PlayerPieceController predictedTarget = FindBestFutureTarget(e, allTeleports);
 
-            // Actual movement
-            yield return StartCoroutine(e.MoveAlongPath(steps, moveBackward));
-            // 🧩 After moving, check if enemy captured player
+                if (predictedTarget != null)
+                {
+                    // find teleport on current path that can connect closer to target's path
+                    Transform teleportHere = FindNearestTeleportTile(e);
+                    if (teleportHere != null)
+                    {
+                        int tpIndex = teleportHere.GetSiblingIndex();
+                        moveBackward = tpIndex < e.currentIndex;
+                        Debug.Log($"🔮 {e.name} predicts {predictedTarget.name} will reach {predictedTarget.currentPath.name}, moving to teleport {tpIndex}");
+                    }
+                    else
+                    {
+                        moveBackward = Random.value > 0.5f;
+                        Debug.Log($"🤖 {e.name} could not find teleport, moving randomly.");
+                    }
+                }
+                else
+                {
+                    // fallback: no predictive path found
+                    Transform teleportHere = FindNearestTeleportTile(e);
+                    if (teleportHere != null)
+                    {
+                        int tpIndex = teleportHere.GetSiblingIndex();
+                        moveBackward = tpIndex < e.currentIndex;
+                        Debug.Log($"🌀 {e.name} heading toward teleport tile (fallback) {tpIndex}");
+                    }
+                    else
+                    {
+                        moveBackward = Random.value > 0.5f;
+                        Debug.Log($"🤖 {e.name} moving randomly (no teleports).");
+                    }
+                }
+            }
+
+
+
+            // Highlight dice visually
+            diceManager.HighlightDieForValue(diceValue);
+            yield return new WaitForSeconds(0.7f);
+
+            // Actually move
+            yield return StartCoroutine(e.MoveAlongPath(diceValue, moveBackward));
+
             OnEnemyPieceLanded(e);
 
-            // Mark die used (grey out)
-            diceManager.SetDieUsed(i);
-
-            yield return new WaitForSeconds(Random.Range(0.8f, 1.2f));
+            yield return new WaitForSeconds(0.8f);
         }
 
-        // ✅ Step 3: End enemy turn
+        // ✅ Turn end
         Debug.Log("✅ Enemy turn ended. Back to Player turn...");
         yield return new WaitForSeconds(0.5f);
 
@@ -386,6 +537,7 @@ public class GameManager : MonoBehaviour
         foreach (var p in playerPieces)
             p.hasMovedThisTurn = false;
     }
+
 
     // 🧩 When an enemy lands on a player tile
     public void OnEnemyPieceLanded(EnemyPieceController enemy)
@@ -413,6 +565,25 @@ public class GameManager : MonoBehaviour
             // Check if all player pieces are dead
             CheckForGameOver();
         }
+    }
+    private PlayerPieceController FindNearestPlayer(EnemyPieceController enemy)
+    {
+        PlayerPieceController nearest = null;
+        float shortestDistance = float.MaxValue;
+
+        foreach (var p in playerPieces)
+        {
+            if (!p.isOnBoard) continue;
+            if (p.currentPath != enemy.currentPath) continue;
+
+            float dist = Mathf.Abs(p.currentIndex - enemy.currentIndex);
+            if (dist < shortestDistance)
+            {
+                shortestDistance = dist;
+                nearest = p;
+            }
+        }
+        return nearest;
     }
 
     // 🧩 Helper to find any player piece at a given tile
