@@ -8,7 +8,6 @@ public class DiceManager : MonoBehaviour
     public static DiceManager Instance;
     public bool CanRoll { get; set; } = true;
 
-
     [Header("🎲 Dice UI")]
     public Button[] diceButtons = new Button[3];
     public TMP_Text[] diceTexts = new TMP_Text[3];
@@ -21,9 +20,10 @@ public class DiceManager : MonoBehaviour
     private bool[] diceUsed = new bool[3];
     public bool IsRolling { get; private set; }
 
-    public int selectedNumber { get; private set; }   // ✅ for backward compatibility
-
-    public event System.Action<int, int> OnDiceSelected;
+    public int selectedNumber { get; set; }
+    [Header("🎵 Audio")]
+    public AudioSource audioSource;
+    public AudioClip diceRollClip;
 
     void Awake()
     {
@@ -43,15 +43,13 @@ public class DiceManager : MonoBehaviour
 
     public void StartRoll()
     {
-        if (!CanRoll)
-        {
-            Debug.Log("⚠️ Cannot roll dice until current turn ends!");
-            return;
-        }
+        if (!CanRoll || IsRolling) return;
+        StartCoroutine(RollAnimation());
+        if (audioSource != null && diceRollClip != null)
+            audioSource.PlayOneShot(diceRollClip);
 
-        if (!IsRolling)
-            StartCoroutine(RollAnimation());
     }
+
 
     private IEnumerator RollAnimation()
     {
@@ -70,7 +68,6 @@ public class DiceManager : MonoBehaviour
         {
             for (int i = 0; i < 3; i++)
                 diceTexts[i].text = Random.Range(1, 7).ToString();
-
             elapsed += rollSpeed;
             yield return new WaitForSeconds(rollSpeed);
         }
@@ -84,23 +81,55 @@ public class DiceManager : MonoBehaviour
         }
 
         IsRolling = false;
+        CanRoll = false; // ❌ prevent re-roll until all dice used
     }
+    // Returns the last rolled dice values for reuse (enemy reading UI dice values)
+    public int[] GetRolledValues()
+    {
+        int[] copy = new int[3];
+        for (int i = 0; i < 3; i++)
+        {
+            int parsed;
+            if (int.TryParse(diceTexts[i].text, out parsed))
+                copy[i] = parsed;
+            else
+                copy[i] = Random.Range(1, 7);
+        }
+        return copy;
+    }
+
+    // Highlights currently used dice visually (for enemy turn)
+    public void HighlightDieForValue(int value)
+    {
+        for (int i = 0; i < diceButtons.Length; i++)
+        {
+            if (diceTexts[i].text == value.ToString())
+            {
+                diceButtons[i].GetComponent<Image>().color = Color.yellow;
+                return;
+            }
+        }
+    }
+
+    // 🌀 Find nearest teleport tile on the current path
+
+
 
     private void HandleDiceClick(int index)
     {
         if (diceUsed[index]) return;
+        if (GameManager.Instance.IsWaitingForPieceSelection()) return;
 
+        selectedNumber = diceValues[index];
         diceUsed[index] = true;
         diceButtons[index].interactable = false;
         diceButtons[index].GetComponent<Image>().color = new Color(0.7f, 0.7f, 0.7f);
 
-        selectedNumber = diceValues[index];
+        DisableAllDiceExcept(index);
+
+        GameManager.Instance.OnDiceSelected(index, selectedNumber);
         Debug.Log($"🎯 Dice {index + 1} selected: {selectedNumber}");
-
-        CanRoll = false; // ✅ prevent re-rolling mid-turn
-        OnDiceSelected?.Invoke(index, selectedNumber);
     }
-
 
     public void SetDieUsed(int index)
     {
@@ -117,12 +146,7 @@ public class DiceManager : MonoBehaviour
             diceTexts[i].text = "";
             diceUsed[i] = false;
         }
-    }
-
-    public int GetDiceValue(int index)
-    {
-        if (index < 0 || index >= diceValues.Length) return 0;
-        return diceValues[index];
+        selectedNumber = 0;
     }
 
     public bool AllDiceUsed()
@@ -131,4 +155,45 @@ public class DiceManager : MonoBehaviour
             if (!used) return false;
         return true;
     }
+
+
+    public void DisableAllDiceExcept(int usedIndex)
+    {
+        for (int i = 0; i < diceButtons.Length; i++)
+        {
+            if (i != usedIndex)
+            {
+                diceButtons[i].interactable = false;
+                diceButtons[i].GetComponent<Image>().color = new Color(0.7f, 0.7f, 0.7f);
+            }
+        }
+    }
+
+    public void EnableUnusedDice()
+    {
+        for (int i = 0; i < diceButtons.Length; i++)
+        {
+            if (!diceUsed[i])
+            {
+                diceButtons[i].interactable = true;
+                diceButtons[i].GetComponent<Image>().color = Color.white;
+            }
+        }
+    }
+    public void ForceRollForEnemy()
+    {
+        for (int i = 0; i < diceButtons.Length; i++)
+        {
+            diceButtons[i].gameObject.SetActive(true);
+            diceTexts[i].text = "";
+            diceButtons[i].interactable = false;
+            diceUsed[i] = false;
+            diceButtons[i].GetComponent<Image>().color = Color.white;
+        }
+
+        CanRoll = true;
+        StartCoroutine(RollAnimation());
+    }
+
+
 }
